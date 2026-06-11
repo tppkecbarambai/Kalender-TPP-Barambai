@@ -1,0 +1,532 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kalender & Rekap TPP Kec. Barambai</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-light: #6366f1;
+      --success: #059669;
+      --warning: #d97706;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    }
+    [data-theme="dark"] {
+      --bg: #020617;
+      --card: #0f172a;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #1e293b;
+      --shadow: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      transition: background 0.3s, color 0.3s;
+    }
+  .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+    header {
+      text-align: center;
+      margin-bottom: 28px;
+      padding: 40px 24px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      border-radius: 24px;
+      color: white;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+    }
+    header h1 { font-size: 2rem; margin-bottom: 8px; font-weight: 800; letter-spacing: -0.5px; }
+    header p { opacity: 0.9; margin-bottom: 24px; font-size: 16px; }
+  .header-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+  .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-weight: 700;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 15px;
+    }
+  .btn-primary { background: white; color: var(--primary); }
+  .btn-secondary { background: rgba(255,255,255,0.2); color: white; backdrop-filter: blur(10px); }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2); }
+
+  .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      background: var(--card);
+      padding: 8px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+    }
+  .tab-btn {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 700;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      font-size: 15px;
+    }
+  .tab-btn.active { background: var(--primary); color: white; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; animation: fadeIn 0.3s; }
+
+  .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 16px;
+      margin-bottom: 24px;
+      background: var(--card);
+      padding: 20px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+  .filter-group label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+  .filter-group select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      font-size: 15px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: inherit;
+      font-weight: 500;
+    }
+  .stats {
+      display: flex;
+      align-items: end;
+      font-size: 14px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+  .loading,.error,.empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 80px 20px;
+      background: var(--card);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+  .kalender-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 20px;
+    }
+  .card {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 24px;
+      border: 1px solid var(--border);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      animation: slideUp 0.4s ease-out;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
+  .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+      gap: 12px;
+    }
+  .tanggal-badge {
+      background: var(--bg);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+  .status-badge {
+      font-size: 12px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+  .status-akan-datang { background: rgba(79, 70, 229, 0.1); color: var(--primary); }
+  .status-selesai { background: rgba(5, 150, 105, 0.1); color: var(--success); }
+  .status-ditunda { background: rgba(217, 119, 6, 0.1); color: var(--warning); }
+  .card h3 {
+      font-size: 1.25rem;
+      margin-bottom: 16px;
+      font-weight: 800;
+      line-height: 1.3;
+      letter-spacing: -0.3px;
+    }
+  .meta {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+  .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+  .meta-item svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.7; }
+  .keterangan {
+      margin-top: 16px;
+      padding: 16px;
+      background: var(--bg);
+      border-radius: 12px;
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      border: 1px solid var(--border);
+    }
+
+    /* Dashboard Rekap */
+  .rekap-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+  .rekap-card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+  .rekap-card h3 {
+      font-size: 1rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+  .rekap-number {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+  .rekap-label {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+  .rekap-bar {
+      margin-top: 12px;
+      height: 8px;
+      background: var(--bg);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+  .rekap-progress {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--primary-light));
+      border-radius: 10px;
+      transition: width 0.5s ease;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 48px;
+      padding: 32px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    footer a { color: var(--primary); text-decoration: none; font-weight: 700; }
+    @media (max-width: 768px) {
+    .container { padding: 12px; }
+      header { padding: 32px 20px; border-radius: 20px; }
+      header h1 { font-size: 1.6rem; }
+    .kalender-grid,.rekap-grid { grid-template-columns: 1fr; gap: 16px; }
+    .controls { grid-template-columns: 1fr; }
+    .stats { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📅 Kalender & Rekap TPP</h1>
+      <p>Kecamatan Barambai | Update Otomatis dari Google Sheets</p>
+      <div class="header-actions">
+        <a href="https://tppkecamatanbarambai.blogspot.com/?m=1" target="_blank" class="btn btn-primary">
+          Kunjungi Blogspot TPP →
+        </a>
+        <button class="btn btn-secondary" id="theme-toggle">
+          🌙 Ganti Mode
+        </button>
+      </div>
+    </header>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="kalender">📅 Kalender</button>
+      <button class="tab-btn" data-tab="rekap">📊 Rekap Bulanan</button>
+    </div>
+
+    <!-- TAB KALENDER -->
+    <div id="kalender" class="tab-content active">
+      <div class="controls">
+        <div class="filter-group">
+          <label for="filter-desa">Filter Desa</label>
+          <select id="filter-desa">
+            <option value="semua">Semua Desa</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filter-status">Filter Status</label>
+          <select id="filter-status">
+            <option value="semua">Semua Status</option>
+            <option value="Akan Datang">Akan Datang</option>
+            <option value="Selesai">Selesai</option>
+            <option value="Ditunda">Ditunda</option>
+          </select>
+        </div>
+        <div class="stats" id="stats">Memuat data...</div>
+      </div>
+      <div id="kalender-list" class="kalender-grid">
+        <div class="loading">Mengambil data terbaru...</div>
+      </div>
+    </div>
+
+    <!-- TAB REKAP -->
+    <div id="rekap" class="tab-content">
+      <div class="controls">
+        <div class="filter-group">
+          <label for="filter-bulan">Filter Bulan</label>
+          <select id="filter-bulan">
+            <option value="semua">Semua Bulan 2026</option>
+          </select>
+        </div>
+        <div class="stats" id="stats-rekap">Memuat rekap...</div>
+      </div>
+      <div id="rekap-list" class="rekap-grid">
+        <div class="loading">Menghitung rekap...</div>
+      </div>
+    </div>
+
+    <footer>
+      <p>Dikelola oleh Tim Pendamping Profesional Kec. Barambai</p>
+      <p>Data sinkron otomatis dari <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vQQI4y7_aieOr6S-pQUvGNi0lWiQLqGU34VuGyfUkAHfM3KFtepOIbo_wRcKn2nDg/pubhtml" target="_blank">Google Sheets</a></p>
+    </footer>
+  </div>
+
+  <script>
+    // ===== LINK GOOGLE SHEETS KAMU UDAH DIMASUKIN =====
+    const sheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQI4y7_aieOr6S-pQUvGNi0lWiQLqGU34VuGyfUkAHfM3KFtepOIbo_wRcKn2nDg/pub?gid=1997673015&single=true&output=csv';
+    // ==================================================
+
+    const listEl = document.getElementById('kalender-list');
+    const rekapListEl = document.getElementById('rekap-list');
+    const filterDesaEl = document.getElementById('filter-desa');
+    const filterStatusEl = document.getElementById('filter-status');
+    const filterBulanEl = document.getElementById('filter-bulan');
+    const statsEl = document.getElementById('stats');
+    const statsRekapEl = document.getElementById('stats-rekap');
+    const themeToggle = document.getElementById('theme-toggle');
+
+    // Dark/Light Mode Toggle
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
+      themeToggle.innerHTML = theme === 'dark'? '☀️ Mode Terang' : '🌙 Mode Gelap';
+    }
+    const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches? 'dark' : 'light');
+    setTheme(savedTheme);
+    themeToggle.addEventListener('click', () => {
+      const newTheme = document.documentElement.getAttribute('data-theme') === 'dark'? 'light' : 'dark';
+      setTheme(newTheme);
+    });
+
+    // Tab Switcher
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Parse CSV Aman
+    function parseCSV(text) {
+      const rows = text.split(/\r?\n/).filter(row => row.trim());
+      if (rows.length < 2) return [];
+      const headers = rows[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, '').replace(/\s+/g, ''));
+      return rows.slice(1).map(row => {
+        const values = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || [];
+        let obj = {};
+        headers.forEach((header, i) => {
+          obj[header] = values[i]? values[i].replace(/^"|"$/g, '').trim() : '';
+        });
+        return obj;
+      }).filter(obj => obj.tanggal && obj.desa);
+    }
+
+    let allData = [];
+
+    async function loadData() {
+      try {
+        const response = await fetch(sheetURL + '&cache=' + Date.now());
+        if (!response.ok) throw new Error('Gagal fetch');
+        const csvText = await response.text();
+        allData = parseCSV(csvText).reverse(); // Entry terbaru di atas
+
+        // Isi dropdown desa
+        const desaUnik = [...new Set(allData.map(k => k.desa))].filter(d => d).sort();
+        filterDesaEl.innerHTML = '<option value="semua">Semua Desa</option>';
+        desaUnik.forEach(desa => {
+          filterDesaEl.innerHTML += `<option value="${desa}">${desa}</option>`;
+        });
+
+        // Isi dropdown bulan
+        const bulanUnik = [...new Set(allData.map(k => {
+          const parts = k.tanggal.split(' ');
+          return parts[1] + ' ' + parts[2]; // "Juni 2026"
+        }))].filter(b => b);
+        filterBulanEl.innerHTML = '<option value="semua">Semua Bulan 2026</option>';
+        bulanUnik.forEach(bulan => {
+          filterBulanEl.innerHTML += `<option value="${bulan}">${bulan}</option>`;
+        });
+
+        renderKalender();
+        renderRekap();
+      } catch (error) {
+        listEl.innerHTML = `<div class="error">
+          <h3>Gagal memuat data</h3>
+          <p>Pastikan Google Sheets sudah dipublikasikan ke web</p>
+        </div>`;
+        console.error(error);
+      }
+    }
+
+    function renderKalender() {
+      const filterDesa = filterDesaEl.value;
+      const filterStatus = filterStatusEl.value;
+      let dataFilter = allData.filter(item => {
+        const matchDesa = filterDesa === 'semua' || item.desa === filterDesa;
+        const matchStatus = filterStatus === 'semua' || item.status === filterStatus;
+        return matchDesa && matchStatus;
+      });
+
+      statsEl.textContent = `${dataFilter.length} kegiatan`;
+
+      if(dataFilter.length === 0) {
+        listEl.innerHTML = `<div class="empty"><h3>Tidak ada jadwal</h3><p>Coba ganti filter</p></div>`;
+        return;
+      }
+
+      listEl.innerHTML = dataFilter.map(item => {
+        const statusClass = item.status.toLowerCase().replace(/\s+/g, '-');
+        return `
+          <div class="card">
+            <div class="card-header">
+              <span class="tanggal-badge">${item.tanggal}</span>
+              <span class="status-badge status-${statusClass}">${item.status}</span>
+            </div>
+            <h3>${item.kegiatan}</h3>
+            <div class="meta">
+              <div class="meta-item">
+                <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
+                <span>${item.desa}</span>
+              </div>
+              <div class="meta-item">
+                <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path></svg>
+                <span>${item.jam}</span>
+              </div>
+            </div>
+            ${item.keterangan? `<div class="keterangan">${item.keterangan}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderRekap() {
+      const filterBulan = filterBulanEl.value;
+      let dataRekap = filterBulan === 'semua'? allData : allData.filter(item => {
+        const parts = item.tanggal.split(' ');
+        return (parts[1] + ' ' + parts[2]) === filterBulan;
+      });
+
+      // Hitung per desa
+      const rekapDesa = {};
+      dataRekap.forEach(item => {
+        if (!rekapDesa[item.desa]) rekapDesa[item.desa] = { total: 0, selesai: 0 };
+        rekapDesa[item.desa].total++;
+        if (item.status === 'Selesai') rekapDesa[item.desa].selesai++;
+      });
+
+      const totalKegiatan = dataRekap.length;
+      const totalSelesai = dataRekap.filter(i => i.status === 'Selesai').length;
+      statsRekapEl.textContent = `${totalKegiatan} kegiatan | ${totalSelesai} selesai`;
+
+      if (Object.keys(rekapDesa).length === 0) {
+        rekapListEl.innerHTML = `<div class="empty"><h3>Belum ada data</h3></div>`;
+        return;
+      }
+
+      rekapListEl.innerHTML = Object.entries(rekapDesa)
+       .sort((a, b) => b[1].total - a[1].total)
+       .map(([desa, data]) => {
+          const persen = data.total > 0? (data.selesai / data.total * 100).toFixed(0) : 0;
+          return `
+            <div class="rekap-card">
+              <h3>${desa}</h3>
+              <div class="rekap-number">${data.total}</div>
+              <div class="rekap-label">Total Kunjungan</div>
+              <div class="rekap-bar">
+                <div class="rekap-progress" style="width: ${persen}%"></div>
+              </div>
+              <div class="rekap-label" style="margin-top: 8px;">${data.selesai} Selesai (${persen}%)</div>
+            </div>
+          `;
+        }).join('');
+    }
+
+    filterDesaEl.addEventListener('change', renderKalender);
+    filterStatusEl.addEventListener('change', renderKalender);
+    filterBulanEl.addEventListener('change', renderRekap);
+    loadData();
+    setInterval(loadData, 180000); // Auto refresh 3 menit
+  </script>
+</body>
+</html>
