@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kalender Pendampingan TPP Kec. Barambai</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --biru: #2563eb;
+      --hijau: #16a34a;
+      --kuning: #eab308;
+      --abu: #f1f5f9;
+      --text: #0f172a;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--abu);
+      color: var(--text);
+      line-height: 1.6;
+    }
+   .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 30px 20px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    header h1 { font-size: 2rem; margin-bottom: 8px; color: var(--biru); }
+    header p { color: #64748b; margin-bottom: 20px; }
+   .btn-blogspot {
+      display: inline-block;
+      background: var(--biru);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: 0.2s;
+    }
+   .btn-blogspot:hover { background: #1d4ed8; transform: translateY(-2px); }
+   .filter-bar {
+      margin-bottom: 20px;
+      background: white;
+      padding: 15px;
+      border-radius: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      align-items: center;
+    }
+   .filter-bar label { font-weight: 600; }
+   .filter-bar select {
+      padding: 8px 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 16px;
+      min-width: 200px;
+    }
+   .loading,.error {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 40px;
+      background: white;
+      border-radius: 12px;
+    }
+   .loading { color: #64748b; }
+   .error { color: #dc2626; }
+   .kalender-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+   .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border-left: 5px solid var(--biru);
+    }
+   .card.status-akan-datang { border-left-color: var(--biru); }
+   .card.status-selesai { border-left-color: var(--hijau); opacity: 0.8; }
+   .card.status-ditunda { border-left-color: var(--kuning); }
+   .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+   .tanggal { font-weight: 600; color: #475569; font-size: 14px; }
+   .badge {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+   .status-akan-datang.badge { background: #dbeafe; color: var(--biru); }
+   .status-selesai.badge { background: #dcfce7; color: var(--hijau); }
+   .status-ditunda.badge { background: #fef9c3; color: #a16207; }
+   .card h3 { font-size: 1.1rem; margin-bottom: 12px; }
+   .card p { margin-bottom: 6px; font-size: 14px; color: #475569; }
+   .card.ket { margin-top: 10px; font-style: italic; color: #64748b; }
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      padding: 20px;
+      color: #64748b;
+      font-size: 14px;
+    }
+    footer a { color: var(--biru); text-decoration: none; }
+    @media (max-width: 640px) {
+     .container { padding: 12px; }
+      header h1 { font-size: 1.5rem; }
+     .kalender-grid { grid-template-columns: 1fr; }
+     .filter-bar select { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📅 Kalender Pendampingan</h1>
+      <p>TPP Kecamatan Barambai | Data dari Google Sheets</p>
+      <a href="https://tppkecamatanbarambai.blogspot.com/?m=1" target="_blank" class="btn-blogspot">
+        Kunjungi Blogspot TPP →
+      </a>
+    </header>
+
+    <div class="filter-bar">
+      <label for="filter-desa">Filter Desa:</label>
+      <select id="filter-desa">
+        <option value="semua">Semua Desa</option>
+      </select>
+      <span id="last-update" style="margin-left:auto; color:#64748b; font-size:14px;"></span>
+    </div>
+
+    <div id="kalender-list" class="kalender-grid">
+      <div class="loading">Memuat jadwal dari Google Sheets...</div>
+    </div>
+
+    <footer>
+      <p>Dikelola oleh Tim Pendamping Profesional Kec. Barambai</p>
+      <p>Update jadwal langsung dari <a href="#" id="link-sheet" target="_blank">Google Sheets</a></p>
+    </footer>
+  </div>
+
+  <script>
+    // ===== GANTI URL INI PAKAI LINK CSV DARI GOOGLE SHEETS KAMU =====
+    const sheetURL = 'URL_CSV_KAMU';
+    // Contoh: https://docs.google.com/spreadsheets/d/e/2PACX-1vQxxx.../pub?output=csv
+    // ===============================================================
+
+    const listEl = document.getElementById('kalender-list');
+    const filterEl = document.getElementById('filter-desa');
+    const updateEl = document.getElementById('last-update');
+    const linkSheetEl = document.getElementById('link-sheet');
+
+    linkSheetEl.href = sheetURL.replace('/pub?output=csv', '/edit');
+
+    async function loadData() {
+      try {
+        const response = await fetch(sheetURL);
+        const csvText = await response.text();
+        const rows = csvText.split('\n').map(row => row.split(','));
+        const headers = rows[0].map(h => h.trim().toLowerCase());
+        const data = rows.slice(1).filter(row => row.length > 1 && row[0]).map(row => {
+          let obj = {};
+          headers.forEach((header, i) => obj[header] = row[i]? row[i].trim() : '');
+          return obj;
+        });
+
+        // Update waktu
+        updateEl.textContent = `Update: ${new Date().toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'})}`;
+
+        // Isi dropdown desa
+        const desaUnik = [...new Set(data.map(k => k.desa))].filter(d => d);
+        desaUnik.forEach(desa => {
+          filterEl.innerHTML += `<option value="${desa}">${desa}</option>`;
+        });
+
+        function renderKalender(filter = 'semua') {
+          listEl.innerHTML = '';
+          const dataFilter = filter === 'semua'
+           ? data
+            : data.filter(k => k.desa === filter);
+
+          if(dataFilter.length === 0) {
+            listEl.innerHTML = `<div class="loading">Belum ada jadwal untuk ${filter}</div>`;
+            return;
+          }
+
+          dataFilter.forEach(item => {
+            const statusClass = item.status.toLowerCase().replace(' ', '-');
+            listEl.innerHTML += `
+              <div class="card status-${statusClass}">
+                <div class="card-header">
+                  <span class="tanggal">${item.tanggal}</span>
+                  <span class="badge">${item.status}</span>
+                </div>
+                <h3>${item.kegiatan}</h3>
+                <p class="desa">📍 ${item.desa}</p>
+                <p class="jam">🕒 ${item.jam}</p>
+                <p class="ket">${item.keterangan}</p>
+              </div>
+            `;
+          });
+        }
+
+        filterEl.addEventListener('change', (e) => renderKalender(e.target.value));
+        renderKalender();
+
+      } catch (error) {
+        listEl.innerHTML = `<div class="error">Gagal memuat data. Cek link Google Sheets atau koneksi internet.</div>`;
+        console.error(error);
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
